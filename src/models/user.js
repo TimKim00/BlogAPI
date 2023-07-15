@@ -19,7 +19,6 @@ const User = {
     async createUser(username, password, creationDate, isAdmin) {
         try {
             const hashedPassword = await generateHashedPassword(username, password);
-            console.log(hashedPassword);
             const result = await pool.query('INSERT INTO users (username, password, is_admin, creation_date) VALUES ($1, $2, $3, $4)', [username, hashedPassword, isAdmin, creationDate]);
             return result.rowCount > 0;
         } catch (err) {
@@ -61,6 +60,7 @@ const User = {
     async removeUser(username) {
         try {
             const result = await pool.query('DELETE FROM users WHERE username = $1', [username]);
+            console.log(result);
             return result.rowCount > 0;
         } catch (err) {
             console.error(err);
@@ -71,7 +71,6 @@ const User = {
 
 async function validateUserCredentials(username, password, storedPassword) {
     try {
-        console.log(username, password, storedPassword);
         // Generate the hashed password using the provided username and password
         const passToEncrypt = username + password;
         const isPasswordValid = await bcrypt.compareSync(passToEncrypt, storedPassword);
