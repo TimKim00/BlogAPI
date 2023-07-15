@@ -6,17 +6,17 @@ module.exports = function(req, res, next) {
     // If a token is found, verify it using jwt.verify().
     // If the token is valid, extract the user data and attach it to the request object.
     // If the token is not valid, send a 401 Unauthorized response.
-    const token = req.header('x-auth-token');
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];  // Bearer <token>
 
     if (!token) {
-        return res.status(401).json({ msg: 'No token, authorization denied. '});
+        return res.status(401).json({ msg: 'Unauthorized'});
     }
-
     try {
-        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-        req.user = decoded.user;
+        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+        req.user = decoded;
         next();
     } catch (err) {
-        res.status(401).json({msg: 'Token is not valid. '});
+        res.status(401).json({msg: 'Unauthorized'});
     }
 }

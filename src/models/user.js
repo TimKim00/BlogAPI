@@ -7,73 +7,56 @@ const User = {
     // a method to create a new user, etc.
 
     async findUser(username) {
-        try {
-            const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-            return result.rows[0];
-        } catch (err) {
-            console.error(err);
-            throw err;
-        }
+        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+        return result.rows[0];
     },
 
     async createUser(username, password, creationDate, isAdmin) {
-        try {
-            const hashedPassword = await generateHashedPassword(username, password);
-            const result = await pool.query('INSERT INTO users (username, password, is_admin, creation_date) VALUES ($1, $2, $3, $4)', [username, hashedPassword, isAdmin, creationDate]);
-            return result.rowCount > 0;
-        } catch (err) {
-            console.error(err);
-            throw err;
-        }
+        const hashedPassword = generateHashedPassword(password);
+        const result = await pool.query('INSERT INTO users (username, password, is_admin, creation_date) VALUES ($1, $2, $3, $4)', [username, hashedPassword, isAdmin, creationDate]);
+        return result.rowCount > 0;
     },
 
     async authenticateUser(username, password) {
-        try {
-            const result = await pool.query('SELECT password FROM users WHERE username = $1', [username]);
-            if (result.rowCount === 0) {
-                return false;
-            }
-            const pw = result.rows[0].password;
-            return await validateUserCredentials(username, password, pw);
-        } catch (err) {
-            console.error(err);
-            throw err;
+        const result = await pool.query('SELECT password FROM users WHERE username = $1', [username]);
+        if (result.rowCount === 0) {
+            return false;
         }
+        const pw = result.rows[0].password;
+        return validateUserCredentials(password, pw);
     },
 
     async changePassword(username, oldPassword, newPassword) {
-        try {
-            const user = await this.findUser(username);
-            if (user && await validateUserCredentials(username, oldPassword, user.password)) {
-                const newHashedPW = generateHashedPassword(username, newPassword);
-                const result = await pool.query('UPDATE users SET password = $1 WHERE id = $2', [newHashedPW, old_row['id']]);
-                return result.rowCount > 0;
-            } else {
-                return false;
-            }
-        } catch (err) {
-            console.error(err);
-            throw err;
+        const user = await this.findUser(username);
+        if (user && validateUserCredentials(oldPassword, user.password)) {
+            const newHashedPW = generateHashedPassword(newPassword);
+            const result = await pool.query('UPDATE users SET password = $1 WHERE id = $2', [newHashedPW, old_row['id']]);
+            return result.rowCount > 0;
+        } else {
+            return false;
         }
     },
 
     async removeUser(username) {
-        try {
-            const result = await pool.query('DELETE FROM users WHERE username = $1', [username]);
-            console.log(result);
-            return result.rowCount > 0;
-        } catch (err) {
-            console.error(err);
-            throw err;
-        }
+        const result = await pool.query('DELETE FROM users WHERE username = $1', [username]);
+        return result.rowCount > 0;
     },
+
+    async userIsAdmin(username) {
+        const result = await pool.query('SELECT is_admin FROM users WHERE username = $1', [username]);
+        if (result) {
+            return result.rows[0].is_admin;
+        }
+        else {
+            return false;
+        }
+    }
 };
 
-async function validateUserCredentials(username, password, storedPassword) {
+function validateUserCredentials(password, storedPassword) {
     try {
         // Generate the hashed password using the provided username and password
-        const passToEncrypt = username + password;
-        const isPasswordValid = await bcrypt.compareSync(passToEncrypt, storedPassword);
+        const isPasswordValid = bcrypt.compareSync(password, storedPassword);
 
         return isPasswordValid;
     } catch (error) {
@@ -83,12 +66,11 @@ async function validateUserCredentials(username, password, storedPassword) {
     }
 }
 
-async function generateHashedPassword(username, password) {
+function generateHashedPassword(password) {
     const saltRounds = 10;
-    const passToEncrypt = username + password;
     // Generate a salt and hash the password
-    const salt = await bcrypt.genSaltSync(saltRounds);
-    const hashedPassword = await bcrypt.hashSync(passToEncrypt, salt);
+    const salt = bcrypt.genSaltSync(saltRounds);
+    const hashedPassword = bcrypt.hashSync(password, salt);
 
     return hashedPassword;
 }
