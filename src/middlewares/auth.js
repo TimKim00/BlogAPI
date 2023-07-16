@@ -16,10 +16,9 @@ module.exports = async function(req, res, next) {
     try {
         const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
         req.user = decoded;
-        const lastTimestamp = await pool.query('SELECT last_update FROM users WHERE id = $1', [decoded.userInfo.user_id]);
+        const lastTimestamp = await pool.query('SELECT last_update FROM users WHERE id = $1', [decoded.userInfo.userId]);
 
-        // console.log(lastTimestamp.rows[0].last_update);
-        // console.log(decoded.timestamp);
+        console.log(decoded);
         if (lastTimestamp.rows[0].last_update > new Date(decoded.timestamp)
          || !req.user || !req.user.userInfo) {
             res.status(401).json({msg: 'Unauthorized'});

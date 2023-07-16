@@ -75,10 +75,12 @@ function generateHashedPassword(password) {
 }
 
 function filterUserInfo(userInfo) {
-    return {user_id: userInfo.id,
-            username: userInfo.username,
-            admin_status: userInfo.is_admin,
-            account_creation_date: userInfo.creationDate };
+    return {
+        userId: userInfo.id,
+        username: userInfo.username,
+        adminStatus: userInfo.is_admin,
+        accountCreationDate: userInfo.creation_date
+    };
 }
 
 module.exports = User;

@@ -21,8 +21,8 @@ router.post('/create', authenticator, async (req, res) => {
             return res.status(400).json({ msg: 'Post Creation Failed' });
         }
 
-        if (req.user.userInfo.username !== req.body.username
-             && !req.user.userInfo.admin_status) {
+        if (req.user.userInfo.userId !== Number(req.body.userId)
+             && !req.user.userInfo.adminStatus) {
             return res.status(400).json({ msg: 'Post Creation Failed' });
         }
 
@@ -38,19 +38,18 @@ router.post('/create', authenticator, async (req, res) => {
         if (!postCreated) {
             return res.status(500).json({ msg: 'Post Creation Failed' });
         }
-        res.status(201).json({ post_info: postCreated });
+        res.status(201).json({ postInfo: postCreated });
     } catch (err) {
         console.error(err);
         res.status(500).json({ msg: 'Server error' });
     }
 });
 
-router.get('view/:postId', authenticator, async (req, res) => {
+router.get('/view/:postId', authenticator, async (req, res) => {
     // Read the post with postId. 
     const postId = req.params.postId;
     try {
         const postInfo = await Post.findPost(postId);
-
         if (!postInfo) {
             return res.status(404).json({msg: 'Post Read Failed'});
         }
@@ -58,7 +57,7 @@ router.get('view/:postId', authenticator, async (req, res) => {
         // Include Comment sectio   n also 
         
         // Return the post information. 
-        return res.status(200).json({post_info: postInfo});
+        return res.status(200).json({postInfo: postInfo});
 
     } catch (err) {
         console.error(err);
@@ -66,7 +65,7 @@ router.get('view/:postId', authenticator, async (req, res) => {
     }
 });
 
-router.put('update/:postId', authenticator, async(req, res) => {
+router.put('/update/:postId', authenticator, async(req, res) => {
     const postId = req.params.postId;
     const userInfo = req.user.userInfo;
     try {
@@ -75,7 +74,8 @@ router.put('update/:postId', authenticator, async(req, res) => {
         }
 
         // Handle the invite. For now, anyone can edit the post. 
-        if (!userInfo.admin_status && false) {
+        if (!userInfo.adminStatus
+             && !await Post.userHasAccess(userInfo.userId, postId)) {
             return res.status(401).json({msg: 'Failed Update'});
         }
 
@@ -86,20 +86,20 @@ router.put('update/:postId', authenticator, async(req, res) => {
             return res.status(404).json({msg: 'Failed Update'});
         }
 
-        return res.status(200).json({post_info: updatedPost});
+        return res.status(200).json({postInfo: updatedPost});
     } catch (err) {
         console.error(err);
         res.status(500).json({ msg: 'Server error' });
     }
 });
 
-router.put('remove/:postId', authenticator, async(req, res) => {
+router.delete('/remove/:postId', authenticator, async(req, res) => {
     const postId = req.params.postId;
     const userInfo = req.user.userInfo;
     try {
         const existingPost = await Post.findPost(postId);
-        if (!existingPost || (!userInfo.admin_status
-             && userInfo.user_id !== existingPost.owner_id)) {
+        if (!existingPost || (!userInfo.adminStatus
+             && userInfo.userId !== existingPost.ownerId)) {
                 return res.status(400).json({msg:"Remove Failed"});
         }
 
