@@ -13,17 +13,23 @@ require('dotenv').config();
 
 const router = express.Router(); 
 
-router.post('/create', async (req, res) => {
+router.post('/create', authenticator, async (req, res) => {
     try {
         // Check that owner's id, title, and content are provided.
-        if (!req.body || !req.body.userId || !req.body.title || !req.body.content) {
+        if (!req.body || !req.body.userId
+             || !req.body.title || !req.body.content) {
+            return res.status(400).json({ msg: 'Post Creation Failed' });
+        }
+
+        if (req.user.userInfo.username !== req.body.username
+             && !req.user.userInfo.admin_status) {
             return res.status(400).json({ msg: 'Post Creation Failed' });
         }
 
         // Check if the post with the same title already exists. 
-        const existingPost = await Post.findPost(req.body.userId, req.body.title);
+        const existingPost = await Post.findPostByTitle(req.body.userId, req.body.title);
         if (existingPost) {
-            return res.status(400).json({ msg: 'Post Creation Failed' });
+            return res.status(409).json({ msg: 'Post Creation Failed' });
         }
 
         // Create the new post
@@ -32,65 +38,80 @@ router.post('/create', async (req, res) => {
         if (!postCreated) {
             return res.status(500).json({ msg: 'Post Creation Failed' });
         }
-
-        // Create a JWT
-        const token = jwt.sign({ postId: postCreated }, process.env.ACCESS_TOKEN_SECRET);
-
-        res.status(201).json({ msg: 'Post created', accessToken: token });
+        res.status(201).json({ post_info: postCreated });
     } catch (err) {
         console.error(err);
         res.status(500).json({ msg: 'Server error' });
     }
 });
 
-router.get('/:postId', async (req, res) => {
+router.get('view/:postId', authenticator, async (req, res) => {
     // Read the post with postId. 
     const postId = req.params.postId;
     try {
-        const postInfo = await Post.readPost(postId);
+        const postInfo = await Post.findPost(postId);
 
         if (!postInfo) {
-            return res.status(500).json({msg: 'Cannot Read Post'});
+            return res.status(404).json({msg: 'Post Read Failed'});
         }
 
-        const ownerInfo = await User.findUserById(postInfo.owner_id);
-        const ownerName = ownerInfo ? ownerInfo.username : null; 
+        // Include Comment sectio   n also 
+        
+        // Return the post information. 
+        return res.status(200).json({post_info: postInfo});
 
-        // Include Comment section also 
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
 
+router.put('update/:postId', authenticator, async(req, res) => {
+    const postId = req.params.postId;
+    const userInfo = req.user.userInfo;
+    try {
+        if (!req.body || !req.body.title || !req.body.content) {
+            return res.status(400).json({msg: "Bad update format"});
+        }
 
+        // Handle the invite. For now, anyone can edit the post. 
+        if (!userInfo.admin_status && false) {
+            return res.status(401).json({msg: 'Failed Update'});
+        }
 
+        const updatedPost = await Post.updatePost(postId, req.body.title, 
+            req.body.content, new Date());
 
+        if (!updatedPost) {
+            return res.status(404).json({msg: 'Failed Update'});
+        }
+
+        return res.status(200).json({post_info: updatedPost});
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+router.put('remove/:postId', authenticator, async(req, res) => {
+    const postId = req.params.postId;
+    const userInfo = req.user.userInfo;
+    try {
+        const existingPost = await Post.findPost(postId);
+        if (!existingPost || (!userInfo.admin_status
+             && userInfo.user_id !== existingPost.owner_id)) {
+                return res.status(400).json({msg:"Remove Failed"});
+        }
+
+        if (!await Post.removePost(postId)) {
+            return res.status(404).json({msg:"Remove Failed"});
+        }
+        return res.status(200).json({msg: "Post Successfully Removed"});
     } catch (err) {
         console.error(err);
         res.status(500).json({ msg: 'Server error' });
     }
 })
-
-router.post('/removeUser', MW, async (req, res) => {
-    try {
-        // Check that username and password are provided
-        if (!req.body || !req.body.username || !req.user) {
-            return res.status(400).json({ msg: 'Unauthorized' });
-        }
-
-        // If the current user is not an admin and they're trying to delete a different user
-        if (!req.user.userInfo.admin_status
-             && req.body.username !== req.user.userInfo.username) {
-            return res.status(401).json({ msg: 'Unauthorized' });
-        }
-
-        if (await User.removeUser(req.body.username)) {
-            return res.status(201).json({msg:'User Successfully removed'});
-        } else {
-            return res.status(401).json({ msg: 'Invalid credentials. Cannot remove the account' });
-        }
-        
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ msg: 'Server error' });
-    }
-});
 
 
 module.exports = router;

@@ -16,11 +16,11 @@ const User = {
         return result.rowCount > 0? filterUserInfo(result.rows[0]) : null;
     },
 
-    async createUser(username, password, creationDate, isAdmin) {
+    async createUser(username, password, isAdmin) {
         const hashedPassword = generateHashedPassword(password);
-        const creationTimestamp = creationDate.toISOString();
-        const result = await pool.query('INSERT INTO users (username, password, is_admin, creation_date, last_update) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-         [username, hashedPassword, isAdmin, creationDate, creationTimestamp]);
+        const result = await pool.query('INSERT INTO users (username, password, is_admin,'
+         + 'creation_date, last_update) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+         [username, hashedPassword, isAdmin, new Date(),  new Date()]);
         return result.rowCount > 0 ? filterUserInfo(result.rows[0]) : null;
     },
 
@@ -38,8 +38,8 @@ const User = {
         const user = await this.findUser(username);
         if (user && validateUserCredentials(oldPassword, user.password)) {
             const newHashedPW = generateHashedPassword(newPassword);
-            const timestamp = new Date().toISOString();
-            const result = await pool.query('UPDATE users SET password = $1, last_update = $3 WHERE id = $2 RETURNING *', [newHashedPW, user.id, timestamp]);
+            const result = await pool.query('UPDATE users SET password = $1, last_update = $3 WHERE id = $2 RETURNING *',
+             [newHashedPW, user.id, new Date()]);
             return result.rowCount > 0 ? filterUserInfo(result.rows[0]) : null;
         } else {
             return null;
