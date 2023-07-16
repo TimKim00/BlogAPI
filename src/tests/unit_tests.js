@@ -4,7 +4,7 @@ const Utils = require('./test_utils');
 
 require('dotenv').config();
 
-const server =  process.env.SERVER_ADDRESS;
+const server = process.env.SERVER_ADDRESS;
 
 chai.should();
 chai.use(chaiHttp);
@@ -14,7 +14,9 @@ describe('Unit tests for user management', () => {
     let user2Token = '';
     let new_user1Token = '';
 
-    Utils.clearUser();
+    it('should clear database', async function() {
+        await Utils.clearDataBase();
+    });
 
     it('Should register user1', (done) => {
         const user1 = {
@@ -192,8 +194,9 @@ describe('Unit tests for post management (CRUD)', () => {
     let post1Id = '';
     let post2Id = '';
 
-    Utils.clearUser();
-    Utils.clearPosts();
+    it('should clear database', async function() {
+        await Utils.clearDataBase();
+    });
 
     it('Should register user1', (done) => {
         const user1 = {
@@ -245,7 +248,7 @@ describe('Unit tests for post management (CRUD)', () => {
         };
 
         chai.request(server)
-            .post('/posts/create')
+            .post('/posts')
             .set('Authorization', `Bearer ${user1Token}`)
             .send(postInfo)
             .end((err, res) => {
@@ -260,7 +263,7 @@ describe('Unit tests for post management (CRUD)', () => {
 
     it('User1 Should view post', (done) => {
         chai.request(server)
-            .get(`/posts/view/${post1Id}`)
+            .get(`/posts/${post1Id}`)
             .set('Authorization', `Bearer ${user1Token}`)
             .end((err, res) => {
                 res.should.have.status(200);
@@ -272,7 +275,7 @@ describe('Unit tests for post management (CRUD)', () => {
 
     it('User2 Should view post', (done) => {
         chai.request(server)
-            .get(`/posts/view/${post1Id}`)
+            .get(`/posts/${post1Id}`)
             .set('Authorization', `Bearer ${user2Token}`)
             .end((err, res) => {
                 res.should.have.status(200);
@@ -289,7 +292,7 @@ describe('Unit tests for post management (CRUD)', () => {
         }
 
         chai.request(server)
-            .put(`/posts/update/${post1Id}`)
+            .put(`/posts/${post1Id}`)
             .set('Authorization', `Bearer ${user2Token}`)
             .send(updatedInfo)
             .end((err, res) => {
@@ -297,7 +300,7 @@ describe('Unit tests for post management (CRUD)', () => {
                 done();
             });
     });
-    
+
     it('User1 Should update post', (done) => {
         const updatedInfo = {
             title: "newTitle",
@@ -305,7 +308,7 @@ describe('Unit tests for post management (CRUD)', () => {
         }
 
         chai.request(server)
-            .put(`/posts/update/${post1Id}`)
+            .put(`/posts/${post1Id}`)
             .set('Authorization', `Bearer ${user1Token}`)
             .send(updatedInfo)
             .end((err, res) => {
@@ -320,7 +323,7 @@ describe('Unit tests for post management (CRUD)', () => {
 
     it('User2 Should not remove post', (done) => {
         chai.request(server)
-            .delete(`/posts/remove/${post1Id}`)
+            .delete(`/posts/${post1Id}`)
             .set('Authorization', `Bearer ${user2Token}`)
             .end((err, res) => {
                 res.should.have.status(400);
@@ -330,7 +333,7 @@ describe('Unit tests for post management (CRUD)', () => {
 
     it('User1 Should remove post', (done) => {
         chai.request(server)
-            .delete(`/posts/remove/${post1Id}`)
+            .delete(`/posts/${post1Id}`)
             .set('Authorization', `Bearer ${user1Token}`)
             .end((err, res) => {
                 res.should.have.status(200);
@@ -339,13 +342,382 @@ describe('Unit tests for post management (CRUD)', () => {
     });
 });
 
+describe('Unit tests for comment features1', () => {
+    let user1Token = '';
+    let user1Id = '';
+    let user2Token = '';
+    let user2Id = '';
+    let post1Id = '';
+    let post2Id = '';
+    let commentId = '';
+    let allComments = new Array();
 
+    it('should clear database', async function () {
+        await Utils.clearDataBase();
+    });
+
+    it('Should register user1', (done) => {
+        const user = {
+            username: 'user1',
+            password: 'userPW1',
+        };
+
+        chai.request(server)
+            .post('/auth/register')
+            .send(user)
+            .end((err, res) => {
+                res.should.have.status(201);
+                res.body.should.be.a('object');
+                res.body.should.have.property('accessToken');
+                res.body.should.have.property('userInfo');
+                user1Id = res.body.userInfo.userId;
+                user1Token = res.body.accessToken;
+                done();
+            });
+    });
+
+    it('Should register user2', (done) => {
+        const user = {
+            username: 'user2',
+            password: 'userPW2',
+        };
+
+        chai.request(server)
+            .post('/auth/register')
+            .send(user)
+            .end((err, res) => {
+                res.should.have.status(201);
+                res.body.should.be.a('object');
+                res.body.should.have.property('accessToken');
+                res.body.should.have.property('userInfo');
+                user2Id = res.body.userInfo.userId;
+                user2Token = res.body.accessToken;
+                done();
+            });
+    });
+
+    it('User1 Should create post', (done) => {
+        const postInfo = {
+            userId: user1Id,
+            title: 'title',
+            content: 'content'
+        };
+
+        chai.request(server)
+            .post('/posts')
+            .set('Authorization', `Bearer ${user1Token}`)
+            .send(postInfo)
+            .end((err, res) => {
+                res.should.have.status(201);
+                res.body.should.be.a('object');
+                res.body.should.have.property('postInfo');
+                res.body.postInfo.should.have.property('postId');
+                post1Id = res.body.postInfo.postId;
+                done();
+            });
+    });
+
+    it('User 2 Should comment', (done) => {
+        const commentInfo = {
+            userId: user2Id,
+            postId: post1Id,
+            isPrivate: false,
+            content: 'commentByUser2'
+        };
+
+        chai.request(server)
+            .post(`/posts/${post1Id}/comments`)
+            .set('Authorization', `Bearer ${user2Token}`)
+            .send(commentInfo)
+            .end((err, res) => {
+                res.should.have.status(201);
+                res.body.should.be.a('object');
+                res.body.should.have.property('commentInfo');
+                res.body.commentInfo.should.have.property('commentId');
+                commentId = res.body.commentInfo.commentId;
+                allComments.push(commentId);
+                done();
+            });
+    });
+
+    it('User 1 Should replay on User2', (done) => {
+        const commentInfo = {
+            userId: user2Id,
+            postId: post1Id,
+            isPrivate: false,
+            content: 'replyByUser1',
+            headId: commentId
+        };
+
+        chai.request(server)
+            .post(`/posts/${post1Id}/comments`)
+            .set('Authorization', `Bearer ${user1Token}`)
+            .send(commentInfo)
+            .end((err, res) => {
+                res.should.have.status(201);
+                res.body.should.be.a('object');
+                res.body.should.have.property('commentInfo');
+                res.body.commentInfo.should.have.property('commentId');
+                commentId = res.body.commentInfo.commentId;
+                allComments.push(commentId);
+                done();
+            });
+    });
+
+    it('User 2 Should replay on User1\'s reply', (done) => {
+        const commentInfo = {
+            userId: user2Id,
+            postId: post1Id,
+            isPrivate: false,
+            content: 'replyByUser2',
+            headId: commentId
+        };
+
+        chai.request(server)
+            .post(`/posts/${post1Id}/comments`)
+            .set('Authorization', `Bearer ${user2Token}`)
+            .send(commentInfo)
+            .end((err, res) => {
+                res.should.have.status(201);
+                res.body.should.be.a('object');
+                res.body.should.have.property('commentInfo');
+                res.body.commentInfo.should.have.property('commentId');
+                commentId = res.body.commentInfo.commentId;
+                allComments.push(commentId);
+                done();
+            });
+    });
+
+    it('User 1 Should make new Comment', (done) => {
+        const commentInfo = {
+            userId: user2Id,
+            postId: post1Id,
+            isPrivate: false,
+            content: 'commmentByUser1'
+        };
+
+        chai.request(server)
+            .post(`/posts/${post1Id}/comments`)
+            .set('Authorization', `Bearer ${user1Token}`)
+            .send(commentInfo)
+            .end((err, res) => {
+                res.should.have.status(201);
+                res.body.should.be.a('object');
+                res.body.should.have.property('commentInfo');
+                res.body.commentInfo.should.have.property('commentId');
+                commentId = res.body.commentInfo.commentId;
+                allComments.push(commentId);
+                done();
+            });
+    });
+
+    it('User 2 Should view all Comments', (done) => {
+        let comments;
+        chai.request(server)
+            .get(`/posts/${post1Id}/comments`)
+            .set('Authorization', `Bearer ${user1Token}`)
+            .end((err, res) => {
+                res.should.have.status(200);
+                res.body.should.be.a('object');
+                res.body.should.have.property('comments');
+                comments = res.body.comments;
+                Utils.checkComments(comments, allComments).should.be.true;
+                done();
+            });
+    });
+});
+
+describe('Unit tests for comment features2', () => {
+    let user1Token = '';
+    let user1Id = '';
+    let user2Token = '';
+    let user2Id = '';
+    let post1Id = '';
+    let post2Id = '';
+    let commentId = '';
+    let allComments = new Array();
+
+    it('should clear database', async function () {
+        await Utils.clearDataBase();
+    });
+
+    it('Should register user1', (done) => {
+        const user = {
+            username: 'user1',
+            password: 'userPW1',
+        };
+
+        chai.request(server)
+            .post('/auth/register')
+            .send(user)
+            .end((err, res) => {
+                res.should.have.status(201);
+                res.body.should.be.a('object');
+                res.body.should.have.property('accessToken');
+                res.body.should.have.property('userInfo');
+                user1Id = res.body.userInfo.userId;
+                user1Token = res.body.accessToken;
+                done();
+            });
+    });
+
+    it('Should register user2', (done) => {
+        const user = {
+            username: 'user2',
+            password: 'userPW2',
+        };
+
+        chai.request(server)
+            .post('/auth/register')
+            .send(user)
+            .end((err, res) => {
+                res.should.have.status(201);
+                res.body.should.be.a('object');
+                res.body.should.have.property('accessToken');
+                res.body.should.have.property('userInfo');
+                user2Id = res.body.userInfo.userId;
+                user2Token = res.body.accessToken;
+                done();
+            });
+    });
+
+    it('User1 Should create post', (done) => {
+        const postInfo = {
+            userId: user1Id,
+            title: 'title',
+            content: 'content'
+        };
+
+        chai.request(server)
+            .post('/posts')
+            .set('Authorization', `Bearer ${user1Token}`)
+            .send(postInfo)
+            .end((err, res) => {
+                res.should.have.status(201);
+                res.body.should.be.a('object');
+                res.body.should.have.property('postInfo');
+                res.body.postInfo.should.have.property('postId');
+                post1Id = res.body.postInfo.postId;
+                done();
+            });
+    });
+
+    it('User 2 Should comment', (done) => {
+        const commentInfo = {
+            userId: user2Id,
+            postId: post1Id,
+            isPrivate: false,
+            content: 'commentByUser2'
+        };
+
+        chai.request(server)
+            .post(`/posts/${post1Id}/comments`)
+            .set('Authorization', `Bearer ${user2Token}`)
+            .send(commentInfo)
+            .end((err, res) => {
+                res.should.have.status(201);
+                res.body.should.be.a('object');
+                res.body.should.have.property('commentInfo');
+                res.body.commentInfo.should.have.property('commentId');
+                commentId = res.body.commentInfo.commentId;
+                allComments.push(commentId);
+                done();
+            });
+    });
+
+    it('User 1 Should replay on User2', (done) => {
+        const commentInfo = {
+            userId: user2Id,
+            postId: post1Id,
+            isPrivate: false,
+            content: 'replyByUser1',
+            headId: commentId
+        };
+
+        chai.request(server)
+            .post(`/posts/${post1Id}/comments`)
+            .set('Authorization', `Bearer ${user1Token}`)
+            .send(commentInfo)
+            .end((err, res) => {
+                res.should.have.status(201);
+                res.body.should.be.a('object');
+                res.body.should.have.property('commentInfo');
+                res.body.commentInfo.should.have.property('commentId');
+                allComments.push(res.body.commentInfo.commentId);
+                done();
+            });
+    });
+
+    it('User 2 Should replay on User2', (done) => {
+        const commentInfo = {
+            userId: user2Id,
+            postId: post1Id,
+            isPrivate: false,
+            content: 'replyByUser2',
+            headId: commentId
+        };
+
+        chai.request(server)
+            .post(`/posts/${post1Id}/comments`)
+            .set('Authorization', `Bearer ${user2Token}`)
+            .send(commentInfo)
+            .end((err, res) => {
+                res.should.have.status(201);
+                res.body.should.be.a('object');
+                res.body.should.have.property('commentInfo');
+                res.body.commentInfo.should.have.property('commentId');
+                commentId = res.body.commentInfo.commentId;
+                allComments.push(commentId);
+                done();
+            });
+    });
+
+    it('User 1 Should make new Comment', (done) => {
+        const commentInfo = {
+            userId: user2Id,
+            postId: post1Id,
+            isPrivate: false,
+            content: 'commmentByUser1'
+        };
+
+        chai.request(server)
+            .post(`/posts/${post1Id}/comments`)
+            .set('Authorization', `Bearer ${user1Token}`)
+            .send(commentInfo)
+            .end((err, res) => {
+                res.should.have.status(201);
+                res.body.should.be.a('object');
+                res.body.should.have.property('commentInfo');
+                res.body.commentInfo.should.have.property('commentId');
+                commentId = res.body.commentInfo.commentId;
+                allComments.push(commentId);
+                done();
+            });
+    });
+
+    it('User 2 Should view all Comments', (done) => {
+        let comments;
+        chai.request(server)
+            .get(`/posts/${post1Id}/comments`)
+            .set('Authorization', `Bearer ${user1Token}`)
+            .end((err, res) => {
+                res.should.have.status(200);
+                res.body.should.be.a('object');
+                res.body.should.have.property('comments');
+                comments = res.body.comments;
+                Utils.checkComments(comments, allComments).should.be.true;
+                done();
+            });
+    });
+});
 
 describe('Unit tests for admin access', () => {
     let adminToken = '';
     let userToken = '';
 
-    Utils.clearUser();
+    it('should clear database', async function () {
+        await Utils.clearDataBase();
+    });
 
     it('Should register admin', (done) => {
         const admin = {
@@ -384,3 +756,4 @@ describe('Unit tests for admin access', () => {
             });
     });
 });
+

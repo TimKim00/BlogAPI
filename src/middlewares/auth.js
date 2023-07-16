@@ -18,7 +18,6 @@ module.exports = async function(req, res, next) {
         req.user = decoded;
         const lastTimestamp = await pool.query('SELECT last_update FROM users WHERE id = $1', [decoded.userInfo.userId]);
 
-        console.log(decoded);
         if (lastTimestamp.rows[0].last_update > new Date(decoded.timestamp)
          || !req.user || !req.user.userInfo) {
             res.status(401).json({msg: 'Unauthorized'});

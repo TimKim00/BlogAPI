@@ -8,12 +8,15 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const authenticator = require('../middlewares/auth');
 const Post = require('../models/post');
+const Comment = require('../models/comment');
 
 require('dotenv').config();
 
 const router = express.Router(); 
 
-router.post('/create', authenticator, async (req, res) => {
+
+/* Post routes */
+router.post('/', authenticator, async (req, res) => {
     try {
         // Check that owner's id, title, and content are provided.
         if (!req.body || !req.body.userId
@@ -45,7 +48,7 @@ router.post('/create', authenticator, async (req, res) => {
     }
 });
 
-router.get('/view/:postId', authenticator, async (req, res) => {
+router.get('/:postId', authenticator, async (req, res) => {
     // Read the post with postId. 
     const postId = req.params.postId;
     try {
@@ -65,7 +68,7 @@ router.get('/view/:postId', authenticator, async (req, res) => {
     }
 });
 
-router.put('/update/:postId', authenticator, async(req, res) => {
+router.put('/:postId', authenticator, async(req, res) => {
     const postId = req.params.postId;
     const userInfo = req.user.userInfo;
     try {
@@ -93,7 +96,7 @@ router.put('/update/:postId', authenticator, async(req, res) => {
     }
 });
 
-router.delete('/remove/:postId', authenticator, async(req, res) => {
+router.delete('/:postId', authenticator, async(req, res) => {
     const postId = req.params.postId;
     const userInfo = req.user.userInfo;
     try {
@@ -111,7 +114,37 @@ router.delete('/remove/:postId', authenticator, async(req, res) => {
         console.error(err);
         res.status(500).json({ msg: 'Server error' });
     }
-})
+});
 
+// /* Comment routes */
+// get all the comments on a specific post. 
+router.get('/:postId/comments', authenticator, async(req, res) => {
+    const postId = req.params.postId;
+    try {
+        const result = await Comment.readAllPostComments(postId);
+        return res.status(200).json({comments: result});
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+/** Create a comment */
+router.post('/:postId/comments', authenticator, async (req, res) => {
+    /* Check if all the fields are present. */
+    if (!req.body || !req.body.postId || !req.body.content
+        || !req.body.userId) {
+        return res.status(400).json({msg: 'Comment Creation Failed.'});
+    }
+
+    const isPrivate = req.body.isPrivate? req.body.isPrivate : false;
+
+    const headId = req.body.headId ? req.body.headId : null;
+    
+    const result = await Comment.createComment(req.body.postId, headId
+        , isPrivate, req.body.content);
+
+    return res.status(201).json({commentInfo: result})
+});
 
 module.exports = router;

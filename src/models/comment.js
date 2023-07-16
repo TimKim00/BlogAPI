@@ -1,40 +1,103 @@
 const pool = require('../config/db');
+const Post = require('./post');
 
 const Comment = {
     /* Define methods for creating, removing, updating, and retreiving the comment. */
 
-    // async createComment(postId, owner_id, content, creationDate) {
-    //     const result = await pool.query('INSERT INTO comments (owner_id, title, content, creation_date, edit_date, removed) VALUES ($1, $2, $3, $4, $4, false) RETURNING *', [ownerId, title, content, creationDate]);
-    //     return result.rowCount > 0 ? result.rows[0] : null;
-    // },
+    async createComment(postId, headId, isPrivate, content) {
+        const ownerId = await Post.findPost(postId);
+        const result = await pool.query('INSERT INTO comments '
+            + '(post_id, owner_id, comment_id, content, creation_date, edit_date, '
+            + 'removed, is_private) VALUES ($1, $2, $3, $4, $5, $5, false, $6) RETURNING *'
+            , [postId, ownerId.ownerId, headId, content, new Date(), isPrivate]);
+        return result.rowCount > 0 ? commentFilter(result.rows[0]) : null;
+    },
 
-    // async removePost(postId) {
-    //     const result = await pool.query('UPDATE posts SET removed = true WHERE id = $1', [postId]);
-    //     return result.rowCount > 0;
-    // },
+    /* finds a signle comment */
+    async findById(commentId) {
+        const result = await pool.query('SELECT * from comments WHERE id = $1'
+            , [commentId])
 
-    // async updatePost(postId, title, content, updateDate) {
-    //     const existingData = await pool.query('SELECT title, content FROM posts WHERE id = $1', [postId]);
-    //     if (existingData.rowCount === 0) {
-    //         return null;
-    //     }
-    //     if (existingData.rows[0].title === title && existingData.rows[0].content === content) {
-    //         // No update is needed. Return the existing content. 
-    //         return existingData.rows[0];
-    //     }
-    //     const result = await pool.query('UPDATE posts SET title = $1, content = $2, edit_date = $3 WHERE id = $4 RETURNING *', [title, content, updateDate, postId]);
-    //     return result.rowCount > 0 ? result.rows[0] : null;
-    // },
+        return result.rowCount > 0 ? result.rows[0] : null;
+    },
 
-    // async readPost(postId) {
-    //     const result = await pool.query('SELECT title, content FROM posts WHERE id = $1', [postId]);
-    //     return result.rowCount > 0 ? result.rows[0] : null;
-    // },
+    /* Returns all the comments associated to the post. */
+    async readAllPostComments(postId) {
+        const result = await pool.query('SELECT * FROM comments WHERE post_id = $1 AND comment_id IS NULL', [postId]);
+        if (result.rowCount > 0) {
+            const comments = result.rows.map((comment) => {
+                return commentFilter(comment, 'reply');
+            });
+            for (let i = 0; i < comments.length; i++) {
+                const replies = await this.readAllReplies(comments[i].commentId);
+                comments[i].replies = replies;
+            }
+            // console.log(comments[0].replies);
+            return comments;
+        } else {
+            return null;
+        }
+    },
 
-    // async findPost(ownerId, title) {
-    //     const result = await pool.query('SELECT * FROM posts WHERE id = $1 AND title = $2', [ownerId, title]);
-    //     return result.rowCount > 0? result.rows[0] : null;
-    // }
+    /* Reads all the comment's replies. */
+    async readAllReplies(commentId) {
+        let replies = new Array();
+        replies = await this.findReplies(commentId);
+        if (replies.length === 0) {
+            return replies;
+        }
+        replies = await Promise.all(
+            replies.map(async (replyId) => {
+                const reply = await this.readAllReplies(replyId.commentId); // Recursively fetch the replies
+                if (reply instanceof Error) {
+                    throw reply;
+                }
+                replyId.replies = reply;
+                return replyId;
+            })
+        );
+        return replies;
+    },
+
+    /* Finds all the comments that are directly rooted by the HEADID */
+    async findReplies(headId) {
+        const result = await pool.query('SELECT * FROM comments WHERE comment_id = $1', [headId]);
+        const replies = result.rows.map((reply) => {
+            return commentFilter(reply, 'reply');
+        });
+
+        return replies;
+    },
 }
 
-module.exports = Post;
+function commentFilter(commentInfo, option) {
+    const defaultRet = {
+        commentId: commentInfo.id,
+        postId: commentInfo.post_id,
+        ownerId: commentInfo.owner_id,
+        headId: commentInfo.comment_id,
+        content: commentInfo.content,
+        creationDate: commentInfo.creation_date,
+        updateDate: commentInfo.edit_date,
+        removed: commentInfo.removed,
+        isPrivate: commentInfo.is_private
+    }
+
+    switch (option) {
+        case 'read':
+            return {
+                ...defaultRet,
+                content: commentInfo.removed ? '' : defaultRet.content,
+            }
+        case 'reply':
+            return {
+                ...defaultRet,
+                content: commentInfo.removed ? '' : defaultRet.content,
+                replies: [],
+            }
+        default:
+            return defaultRet;
+    }
+}
+
+module.exports = Comment;
