@@ -2,6 +2,7 @@ const express = require('express');
 const authRoutes = require('./routes/auth');
 const postRoutes = require('./routes/posts');
 const accessRoutes = require('./routes/access');
+const searchRoutes = require('./routes/search');
 
 const app = express();
 // Use express.json() middleware
@@ -14,6 +15,7 @@ require('./config/db');
 app.use('/auth', authRoutes);
 app.use('/posts', postRoutes);
 app.use('/access', accessRoutes);
+app.use('/search', searchRoutes);
 
 // Start the server.
 const port = process.env.PORT || 3000;

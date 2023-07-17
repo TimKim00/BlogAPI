@@ -3,8 +3,6 @@
  */
 
 const express = require('express');
-const jwt = require('jsonwebtoken');
-const User = require('../models/user');
 const authenticator = require('../middlewares/auth');
 const Post = require('../models/post');
 

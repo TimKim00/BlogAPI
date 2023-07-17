@@ -4,8 +4,6 @@
 
 
 const express = require('express');
-const jwt = require('jsonwebtoken');
-const User = require('../models/user');
 const authenticator = require('../middlewares/auth');
 const Post = require('../models/post');
 const Comment = require('../models/comment');
@@ -56,8 +54,6 @@ router.get('/:postId', authenticator, async (req, res) => {
         if (!postInfo) {
             return res.status(404).json({ msg: 'Post Read Failed' });
         }
-
-        // Include Comment sectio   n also 
 
         // Return the post information. 
         return res.status(200).json({ postInfo: postInfo });

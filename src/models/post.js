@@ -1,6 +1,8 @@
 const pool = require('../config/db');
 
 const Post = {
+    displayLimit : 25, 
+
     /* Define methods for creating, removing, updating, and reading the post.
        Also, have methods to manage posts to implement the search features. */
 
@@ -77,7 +79,57 @@ const Post = {
 
         const ret = result.rows.map(accessFilter);
         return result.rowCount > 0 ? ret : null;
-    }
+    },
+
+    setDisplayLimit(limit) {
+        this.displayLimit = limit;
+    },
+
+    getDisplayLimit() {
+        return this.displayLimit;
+    },
+
+    async searchPosts(searchInfo) {
+        const startDate = searchInfo.startDate ? new Date(searchInfo.startDate) : null;
+        const endDate = searchInfo.endDate ? new Date(searchInfo.endDate) : null;
+        const titleIncludes = searchInfo.title;
+        const contentIncludes = searchInfo.content;
+        const sortBy = searchInfo.sortBy? searchInfo.sortBy : null;
+        params = [startDate, endDate];
+
+        let query = "SELECT * FROM posts WHERE removed = false AND " + 
+        "(creation_date >= $1 OR $1 IS NULL) AND (creation_date <= $2 OR $2 IS NULL) ";
+        let numParams = 2;
+        let sortParam = 2;
+
+        if (titleIncludes) {
+            numParams += 1;
+            params.push(titleIncludes);
+            query += `AND (title <% $${numParams}) `;
+            if (sortBy === "title") {
+                sortParam = numParams;
+            }
+        }
+
+        if (contentIncludes) {
+            numParams += 1;
+            params.push(contentIncludes);
+            query += `AND (content <% $${numParams}) `;
+            if (sortBy === "content") {
+                sortParam = numParams;
+            }
+        }
+
+        query = sortSearch(query, sortBy, sortParam);
+
+        query += `LIMIT ${this.displayLimit}`;
+        console.log(query);
+        const result = await pool.query(query, params);
+        const ret = result.rowCount > 0? result.rows.map(postFilter) : null;
+        
+        return ret;
+    }   
+    
 }
 
 function postFilter(postInfo) {
@@ -97,6 +149,19 @@ function accessFilter(accessInfo) {
         postId: accessInfo.post_id,
         userId: accessInfo.user_id
     };
+}
+
+function sortSearch(query, sortBy, paramNum) {
+    switch (sortBy) {
+        case "date":
+            return query + "ORDER BY creation_date ASC ";
+        case "title":
+            return query + `ORDER BY title <-> $${paramNum} `;
+        case "content":
+            return query + `ORDER BY content <-> $${paramNum} `;
+        default: 
+            return query;
+    }
 }
 
 module.exports = Post;

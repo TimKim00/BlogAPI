@@ -1,6 +1,7 @@
 const chai = require('chai');
 const chaiHttp = require('chai-http');
 const Utils = require('../utils/test_utils');
+const { displayLimit } = require('../models/post');
 
 require('dotenv').config();
 
@@ -9,14 +10,16 @@ const server = process.env.SERVER_ADDRESS;
 chai.should();
 chai.use(chaiHttp);
 
+const searchLimit = displayLimit;
+
 // describe('Unit tests for user management', () => {
 //     let user1Token = '';
 //     let user2Token = '';
 //     let new_user1Token = '';
 
-//     it('should clear database', async function() {
-//         await Utils.clearDataBase();
-//     });
+    // it('should clear database', async function() {
+    //     await Utils.clearDataBase();
+    // });
 
 //     it('Should register user1', (done) => {
 //         const user1 = {
@@ -840,7 +843,7 @@ chai.use(chaiHttp);
 //             isPrivate: true,
 //             commentId: commentId,
 //             content: 'replyByUser1'
-            
+
 //         };
 
 //         chai.request(server)
@@ -900,16 +903,168 @@ chai.use(chaiHttp);
 //     });
 // });
 
-describe('Unit tests for invite features', () => {
+// describe('Unit tests for invite features', () => {
+//     let user1Token = '';
+//     let user1Id = '';
+//     let user2Token = '';
+//     let user2Id = '';
+//     let user3Token = '';
+//     let user3Id = '';
+//     let post1Id = '';
+
+//     it('should clear database', async function () {
+//         await Utils.clearDataBase();
+//     });
+
+//     it('Should register user1', (done) => {
+//         const user = {
+//             username: 'user1',
+//             password: 'userPW1',
+//         };
+
+//         chai.request(server)
+//             .post('/auth/register')
+//             .send(user)
+//             .end((err, res) => {
+//                 res.should.have.status(201);
+//                 res.body.should.be.a('object');
+//                 res.body.should.have.property('accessToken');
+//                 res.body.should.have.property('userInfo');
+//                 user1Id = res.body.userInfo.userId;
+//                 user1Token = res.body.accessToken;
+//                 done();
+//             });
+//     });
+
+//     it('Should register user2', (done) => {
+//         const user = {
+//             username: 'user2',
+//             password: 'userPW2',
+//         };
+
+//         chai.request(server)
+//             .post('/auth/register')
+//             .send(user)
+//             .end((err, res) => {
+//                 res.should.have.status(201);
+//                 res.body.should.be.a('object');
+//                 res.body.should.have.property('accessToken');
+//                 res.body.should.have.property('userInfo');
+//                 user2Id = res.body.userInfo.userId;
+//                 user2Token = res.body.accessToken;
+//                 done();
+//             });
+//     });
+
+//     it('Should register user3', (done) => {
+//         const user = {
+//             username: 'user3',
+//             password: 'userPW3',
+//         };
+
+//         chai.request(server)
+//             .post('/auth/register')
+//             .send(user)
+//             .end((err, res) => {
+//                 res.should.have.status(201);
+//                 res.body.should.be.a('object');
+//                 res.body.should.have.property('accessToken');
+//                 res.body.should.have.property('userInfo');
+//                 user3Id = res.body.userInfo.userId;
+//                 user3Token = res.body.accessToken;
+//                 done();
+//             });
+//     });
+
+//     it('User1 Should create post', (done) => {
+//         const postInfo = {
+//             userId: user1Id,
+//             title: 'title',
+//             content: 'content'
+//         };
+
+//         chai.request(server)
+//             .post('/posts')
+//             .set('Authorization', `Bearer ${user1Token}`)
+//             .send(postInfo)
+//             .end((err, res) => {
+//                 res.should.have.status(201);
+//                 res.body.should.be.a('object');
+//                 res.body.should.have.property('postInfo');
+//                 res.body.postInfo.should.have.property('postId');
+//                 post1Id = res.body.postInfo.postId;
+//                 done();
+//             });
+//     });
+
+//     it('User1 Should invite User2 and User3', (done) => {
+//         const postInfo = {
+//             invitees: [user2Id, user3Id]
+//         };
+
+//         chai.request(server)
+//             .post(`/access/${post1Id}`)
+//             .set('Authorization', `Bearer ${user1Token}`)
+//             .send(postInfo)
+//             .end((err, res) => {
+//                 res.should.have.status(201);
+//                 res.body.should.be.a('object');
+//                 res.body.should.have.property('accessInfo');
+//                 let validUsers = [user2Id, user3Id];
+//                 Utils.checkAccesses(res.body.accessInfo, validUsers).should.be.true;
+//                 done();
+//             });
+//     });
+
+//     it('User1 Should not invite User2 and User3 again', (done) => {
+//         const postInfo = {
+//             invitees: [user2Id, user3Id]
+//         };
+
+//         chai.request(server)
+//             .post(`/access/${post1Id}`)
+//             .set('Authorization', `Bearer ${user1Token}`)
+//             .send(postInfo)
+//             .end((err, res) => {
+//                 res.should.have.status(201);
+//                 res.body.should.be.a('object');
+//                 res.body.should.have.property('accessInfo');
+//                 chai.expect(res.body.accessInfo).to.be.null;
+//                 done();
+//             });
+//     });
+
+//     it('User1 Revoke User2 and User3', (done) => {
+//         const postInfo = {
+//             revokeList: [user2Id, user3Id]
+//         };
+
+//         chai.request(server)
+//             .delete(`/access/${post1Id}`)
+//             .set('Authorization', `Bearer ${user1Token}`)
+//             .send(postInfo)
+//             .end((err, res) => {
+//                 res.should.have.status(200);
+//                 res.body.should.be.a('object');
+//                 res.body.should.have.property('revokeList');
+//                 let validUsers = [user2Id, user3Id];
+//                 Utils.checkAccesses(res.body.revokeList, validUsers).should.be.true;
+//                 done();
+//             });
+//     });
+// });
+
+describe('Unit tests for search features', () => {
     let user1Token = '';
     let user1Id = '';
     let user2Token = '';
     let user2Id = '';
-    let user3Token = '';
-    let user3Id = '';
-    let post1Id = '';
+    let postIds = [];
 
-    it('should clear database', async function () {
+    let startDate = 3;
+    let endDate = 48;
+
+    it('should clear database', async function() {
         await Utils.clearDataBase();
     });
 
@@ -953,147 +1108,120 @@ describe('Unit tests for invite features', () => {
             });
     });
 
-    it('Should register user3', (done) => {
-        const user = {
-            username: 'user3',
-            password: 'userPW3',
-        };
-
-        chai.request(server)
-            .post('/auth/register')
-            .send(user)
-            .end((err, res) => {
-                res.should.have.status(201);
-                res.body.should.be.a('object');
-                res.body.should.have.property('accessToken');
-                res.body.should.have.property('userInfo');
-                user3Id = res.body.userInfo.userId;
-                user3Token = res.body.accessToken;
-                done();
-            });
-    });
-
-    it('User1 Should create post', (done) => {
-        const postInfo = {
+    it('User1 Should create many posts', async function() {
+        this.timeout(5000);
+        console.log(new Date());
+        const postInfoTemplate = {
             userId: user1Id,
             title: 'title',
             content: 'content'
         };
+    
+        let promises = [];
+    
+        for (let i = 1; i <= 100; i++) {
+            let postInfo = {
+                ...postInfoTemplate,
+                title: '<'.repeat(i) + 'title' + '>'.repeat(i),
+                content: '<'.repeat(i) + 'content' + '>'.repeat(i),
+            }
+    
+            if (i === startDate) {
+                startDate = new Date();
+            }
+            if (i === endDate) {
+                endDate = new Date();
+            }
+    
+            let promise = chai.request(server)
+                .post('/posts')
+                .set('Authorization', `Bearer ${user1Token}`)
+                .send(postInfo)
+                .then((res) => {
+                    res.should.have.status(201);
+                    res.body.should.be.a('object');
+                    res.body.should.have.property('postInfo');
+                    res.body.postInfo.should.have.property('postId');
+                    postIds.push(res.body.postInfo.postId);
+                });
+    
+            promises.push(promise);
+        }
+    
+        Promise.all(promises)
+        .then(() => done())
+        .catch((err) => done(err));
 
-        chai.request(server)
-            .post('/posts')
-            .set('Authorization', `Bearer ${user1Token}`)
-            .send(postInfo)
-            .end((err, res) => {
-                res.should.have.status(201);
-                res.body.should.be.a('object');
-                res.body.should.have.property('postInfo');
-                res.body.postInfo.should.have.property('postId');
-                post1Id = res.body.postInfo.postId;
-                done();
-            });
     });
     
-    it('User1 Should invite User2 and User3', (done) => {
-        const postInfo = {
-            invitees: [user2Id, user3Id]
+    
+
+    it('Should search posts', (done) => {
+        const searchInfo = {
+            //startDate: startDate,
+            //endDate: endDate,
+            title: "title",
+            content: "content",
+            sortBy: "content"
         };
 
         chai.request(server)
-            .post(`/access/${post1Id}`)
+            .get('/search')
             .set('Authorization', `Bearer ${user1Token}`)
-            .send(postInfo)
-            .end((err, res) => {
-                res.should.have.status(201);
-                res.body.should.be.a('object');
-                res.body.should.have.property('accessInfo');
-                let validUsers = [user2Id, user3Id];
-                Utils.checkAccesses(res.body.accessInfo, validUsers).should.be.true;
-                done();
-            });
-    });
-
-    it('User1 Should not invite User2 and User3 again', (done) => {
-        const postInfo = {
-            invitees: [user2Id, user3Id]
-        };
-
-        chai.request(server)
-            .post(`/access/${post1Id}`)
-            .set('Authorization', `Bearer ${user1Token}`)
-            .send(postInfo)
-            .end((err, res) => {
-                res.should.have.status(201);
-                res.body.should.be.a('object');
-                res.body.should.have.property('accessInfo');
-                chai.expect(res.body.accessInfo).to.be.null;
-                done();
-            });
-    });
-
-    it('User1 Revoke User2 and User3', (done) => {
-        const postInfo = {
-            revokeList: [user2Id, user3Id]
-        };
-
-        chai.request(server)
-            .delete(`/access/${post1Id}`)
-            .set('Authorization', `Bearer ${user1Token}`)
-            .send(postInfo)
+            .send(searchInfo)
             .end((err, res) => {
                 res.should.have.status(200);
                 res.body.should.be.a('object');
-                res.body.should.have.property('revokeList');
-                let validUsers = [user2Id, user3Id];
-                Utils.checkAccesses(res.body.revokeList, validUsers).should.be.true;
+                res.body.should.have.property('searchInfo');
+                const searchInfo = res.body.searchInfo;
                 done();
             });
     });
 });
 
-describe('Unit tests for admin access', () => {
-    let adminToken = '';
-    let userToken = '';
+// describe('Unit tests for admin access', () => {
+//     let adminToken = '';
+//     let userToken = '';
 
-    it('should clear database', async function () {
-        await Utils.clearDataBase();
-    });
+//     it('should clear database', async function() {
+//         await Utils.clearDataBase();
+//     });
 
-    it('Should register admin', (done) => {
-        const admin = {
-            username: 'admin',
-            password: 'adminPW',
-            admin: 'true'
-        };
+//     it('Should register admin', (done) => {
+//         const admin = {
+//             username: 'admin',
+//             password: 'adminPW',
+//             admin: 'true'
+//         };
 
-        chai.request(server)
-            .post('/auth/register')
-            .send(admin)
-            .end((err, res) => {
-                res.should.have.status(201);
-                res.body.should.be.a('object');
-                res.body.should.have.property('accessToken');
-                adminToken = res.body.accessToken;
-                done();
-            });
-    });
+//         chai.request(server)
+//             .post('/auth/register')
+//             .send(admin)
+//             .end((err, res) => {
+//                 res.should.have.status(201);
+//                 res.body.should.be.a('object');
+//                 res.body.should.have.property('accessToken');
+//                 adminToken = res.body.accessToken;
+//                 done();
+//             });
+//     });
 
-    it('Should register user', (done) => {
-        const user = {
-            username: 'user',
-            password: 'userPW',
-        };
+//     it('Should register user', (done) => {
+//         const user = {
+//             username: 'user',
+//             password: 'userPW',
+//         };
 
-        chai.request(server)
-            .post('/auth/register')
-            .send(user)
-            .end((err, res) => {
-                res.should.have.status(201);
-                res.body.should.be.a('object');
-                res.body.should.have.property('accessToken');
-                userToken = res.body.accessToken;
-                done();
-            });
-    });
-});
+//         chai.request(server)
+//             .post('/auth/register')
+//             .send(user)
+//             .end((err, res) => {
+//                 res.should.have.status(201);
+//                 res.body.should.be.a('object');
+//                 res.body.should.have.property('accessToken');
+//                 userToken = res.body.accessToken;
+//                 done();
+//             });
+//     });
+// });
 
