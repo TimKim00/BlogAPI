@@ -55,9 +55,23 @@ const Utils = {
         // If there are any remaining ids in allCommentId, that means they weren't found in the comments
         // so we return false. Otherwise, we return whatever result we got from traversing the comments.
         return allCommentId.length === 0 && result;
+    },
+
+    checkAccesses(accessInfo, validUsers) {
+        if (!accessInfo) {
+            return false;
+        }
+
+        for (let access of accessInfo) {
+            let index = validUsers.indexOf(access.userId);
+            if (index !== -1) {
+                validUsers.splice(index, 1);
+            } else {
+                return false;
+            }
+        }
+        return validUsers.length === 0;
     }
-
-
 }
 
 module.exports = Utils;

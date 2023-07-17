@@ -53,6 +53,30 @@ const Post = {
             return true;
         }
         return false;
+    },
+
+    async sharePost(postId, invitees) {
+        const values = [];
+        const text = [];
+        for(let i = 0; i < invitees.length; i++) {
+            text.push(`($${2*i+1}, $${2*i+2})`);
+            values.push(Number(postId), invitees[i]);
+        }
+
+        const query = `INSERT INTO invites (post_id, user_id) VALUES ${text.join(", ")} ON CONFLICT (post_id, user_id) DO NOTHING RETURNING *`;
+        
+        const result = await pool.query(query, values);
+        const ret = result.rows.map(accessFilter);
+        return result.rowCount > 0 ? ret : null;
+    },
+
+    async revokeInvites(postId, revokeList) {
+        const result = await pool.query('DELETE FROM invites WHERE '
+         + 'post_id = $1 AND user_id = ANY($2::int[]) RETURNING *'
+         , [postId, revokeList]);
+
+        const ret = result.rows.map(accessFilter);
+        return result.rowCount > 0 ? ret : null;
     }
 }
 
@@ -65,6 +89,13 @@ function postFilter(postInfo) {
         creationDate: postInfo.creation_date,
         updateDate: postInfo.edit_date,
         removed: postInfo.removed
+    };
+}
+
+function accessFilter(accessInfo) {
+    return {
+        postId: accessInfo.post_id,
+        userId: accessInfo.user_id
     };
 }
 
