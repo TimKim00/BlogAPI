@@ -14,22 +14,26 @@ const Comment = {
     },
 
     /* finds a signle comment */
-    async findById(postId, commentId) {
+    async findById(commentId, userInfo, postId) {
         const result = await pool.query('SELECT * from comments WHERE id = $1 AND post_id = $2'
             , [commentId, postId])
-
-        return result.rowCount > 0 ? commentFilter(result.rows[0], null, ) : null;
+        const postInfo = await pool.query('SELECT owner_id FROM posts WHERE id = $1', [postId]);
+        const ownerId = postInfo.rows[0].owner_id;
+        return result.rowCount > 0 && postInfo.rowCount > 0 
+        ? filterPrivateComments(userInfo, commentFilter(result.rows[0]), ownerId) : null;
     },
 
     /* Returns all the comments associated to the post. */
     async readAllPostComments(postId, userInfo) {
         const result = await pool.query('SELECT * FROM comments WHERE post_id = $1 AND comment_id IS NULL', [postId]);
-        if (result.rowCount > 0) {
+        const postInfo = await pool.query('SELECT owner_id FROM posts WHERE id = $1', [postId]);
+        if (result.rowCount > 0 && postInfo.rowCount > 0) {
+            const ownerId = postInfo.rows[0].owner_id;
             const comments = result.rows.map((comment) => {
                 return commentFilter(comment, 'reply');
             });
             for (let i = 0; i < comments.length; i++) {
-                const replies = await this.readAllReplies(comments[i].commentId, userInfo);
+                const replies = await this.readAllReplies(comments[i].commentId, userInfo, ownerId);
                 comments[i].replies = replies;
             }
             // console.log(comments[0].replies);
@@ -40,15 +44,15 @@ const Comment = {
     },
 
     /* Reads all the comment's replies. */
-    async readAllReplies(commentId, userInfo) {
+    async readAllReplies(commentId, userInfo, ownerId) {
         let replies = new Array();
-        replies = await this.findReplies(commentId, userInfo);
+        replies = await this.findReplies(commentId, userInfo, ownerId);
         if (replies.length === 0) {
             return replies;
         }
         replies = await Promise.all(
             replies.map(async (replyId) => {
-                const reply = await this.readAllReplies(replyId.commentId, userInfo); // Recursively fetch the replies
+                const reply = await this.readAllReplies(replyId.commentId, userInfo, ownerId); // Recursively fetch the replies
                 if (reply instanceof Error) {
                     throw reply;
                 }
@@ -60,10 +64,10 @@ const Comment = {
     },
 
     /* Finds all the comments that are directly rooted by the HEADID */
-    async findReplies(headId, userInfo) {
+    async findReplies(headId, userInfo, ownerId) {
         const result = await pool.query('SELECT * FROM comments WHERE comment_id = $1', [headId]);
         const replies = result.rows.map((reply) => {
-            return commentFilter(reply, 'reply', userInfo);
+            return filterPrivateComments(userInfo, commentFilter(reply, 'reply'), ownerId);
         });
 
         return replies;
@@ -128,8 +132,22 @@ function commentFilter(commentInfo, option) {
     }
 }
 
-function enableCommentAccess(userInfo, commentId) {
-    
+
+/* Filters the private comments. Checks whether the user defined in USERINFO
+can view COMMENTINFO for the comment whose post owner is OWNERID.  */
+function filterPrivateComments(userInfo, commentInfo, ownerId) {
+    if (!userInfo.adminStatus && userInfo.userId !== commentInfo.ownerId
+        && userInfo.userId !== ownerId && commentInfo.isPrivate) {
+            // Has no access to view the private message
+            return {
+                ...commentInfo,
+                content: null,
+                creationDate: null,
+                updateDate: null,
+                ownerId: null
+            }
+        }
+    return commentInfo;
 }
 
 module.exports = Comment;

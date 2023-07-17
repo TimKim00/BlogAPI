@@ -120,8 +120,9 @@ router.delete('/:postId', authenticator, async (req, res) => {
 // get all the comments on a specific post. 
 router.get('/:postId/comments', authenticator, async (req, res) => {
     const postId = req.params.postId;
+    const userInfo = req.user.userInfo;
     try {
-        const result = await Comment.readAllPostComments(postId);
+        const result = await Comment.readAllPostComments(postId, userInfo);
         return res.status(200).json({ comments: result });
     } catch (err) {
         console.error(err);
@@ -133,9 +134,10 @@ router.get('/:postId/comments', authenticator, async (req, res) => {
 router.get('/:postId/comments/:commentId', authenticator, async (req, res) => {
     const postId = req.params.postId;
     const commentId = req.params.commentId;
+    const userInfo = req.user.userInfo;
     try {
-        const result = await Comment.findById(postId, commentId);
-        if (!result || result.hidden) {
+        const result = await Comment.findById(commentId, userInfo, postId);
+        if (!result) {
             return res.status(404).json({msg : "Search Failed"});
         }
         return res.status(200).json({ comments: result });

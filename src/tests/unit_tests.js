@@ -873,12 +873,13 @@ describe('Unit tests for comment features3', () => {
     });
 
     it('User 2 Should not see User1\'s private reply', (done) => {
-        let comments;
         chai.request(server)
             .get(`/posts/${post1Id}/comments/${commentId}`)
             .set('Authorization', `Bearer ${user2Token}`)
             .end((err, res) => {
-                res.should.have.status(404);
+                res.should.have.status(200);
+                res.body.should.have.property('comments');
+                chai.expect(res.body.comments.content).to.be.null;
                 done();
             });
     });
