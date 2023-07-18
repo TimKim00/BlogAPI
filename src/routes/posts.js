@@ -64,6 +64,7 @@ router.get('/:postId', authenticator, async (req, res) => {
     }
 });
 
+// Edit a post
 router.put('/:postId', authenticator, async (req, res) => {
     const postId = req.params.postId;
     const userInfo = req.user.userInfo;
@@ -92,6 +93,7 @@ router.put('/:postId', authenticator, async (req, res) => {
     }
 });
 
+// Delete a post.
 router.delete('/:postId', authenticator, async (req, res) => {
     const postId = req.params.postId;
     const userInfo = req.user.userInfo;

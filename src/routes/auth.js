@@ -32,7 +32,7 @@ router.post('/register', async (req, res) => {
         }
 
         // Create a JWT
-        const token = jwt.sign({userInfo: userCreated, timestamp:  new Date()}, process.env.ACCESS_TOKEN_SECRET);
+        const token = jwt.sign({userInfo: userCreated, timestamp:  new Date()}, process.env.JWT_SECRET);
         return res.status(201).json({accessToken: token, userInfo: userCreated });
 
     } catch (err) {
@@ -52,7 +52,7 @@ router.post('/login', async (req, res) => {
         const authenticatedUser = await User.authenticateUser(req.body.username, req.body.password)
 
         if (authenticatedUser) {
-            const token = jwt.sign({userInfo: authenticatedUser, timestamp: new Date()}, process.env.ACCESS_TOKEN_SECRET);
+            const token = jwt.sign({userInfo: authenticatedUser, timestamp: new Date()}, process.env.JWT_SECRET);
             return res.status(200).json({accessToken: token, userInfo: authenticatedUser });
         }
         else {
@@ -77,7 +77,7 @@ router.put('/changePW', authenticator, async (req, res) => {
         if (!updatedUser) {
             return res.status(401).json({ msg: 'Unauthorized' });
         }
-        const token = jwt.sign({userInfo: updatedUser, timestamp: new Date()}, process.env.ACCESS_TOKEN_SECRET);
+        const token = jwt.sign({userInfo: updatedUser, timestamp: new Date()}, process.env.JWT_SECRET);
         res.status(200).json({accessToken: token, userInfo: updatedUser });
     } catch (err) {
         console.error(err);

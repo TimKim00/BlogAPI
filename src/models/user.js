@@ -1,5 +1,5 @@
 const pool = require('../config/db');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const Post = require('./post');
 
 const User = {
@@ -137,7 +137,6 @@ const User = {
              + ' VALUES ($1, $2, $3, $4) RETURNING *', [username, password, false, new Date()]);
         }
         this.dummyUserId = userResult.rows[0].id;
-        console.log(this.dummyUserId);
     }
 
 };

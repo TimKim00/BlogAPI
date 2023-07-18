@@ -1,15 +1,26 @@
-# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
-# For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
+name: Node.js CI/CD
 
-name: CI/CD Pipeline
-
-on: [push]
+on:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
 
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: 14
+
+    - name: Install dependencies
+      run: npm ci
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:15
@@ -19,22 +30,41 @@ jobs:
           POSTGRES_DB: blogapi
         ports:
           - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+    - uses: actions/checkout@v2
 
-    - name: Build Docker image
-      run: docker build -t my-app .
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: 14
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Wait for PostgreSQL to start
+      run: dockerize -wait tcp://localhost:5432 -timeout 1m
 
     - name: Run tests
-      run: docker run -e PGHOST=postgres -e PGUSER=blog_user -e PGPASSWORD=RESTfulAPI -e PGDATABASE=blogapi my-app npm test
+      run: npm test
+      env:
+        NODE_ENV: test
+        SERVER_ADDRESS: localhost
 
-    - name: Push to DockerHub
-      if: success() && github.ref == 'refs/heads/main'
-      run: |
-        echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-        docker tag my-app:latest ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
-        docker push ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
+  docker-build-push:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
 
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: true
+        tags: yourdockerhubusername/yourapp:${{ github.sha }}

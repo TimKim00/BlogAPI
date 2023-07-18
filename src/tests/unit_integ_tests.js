@@ -7,11 +7,15 @@ const chai = require('chai');
 const chaiHttp = require('chai-http');
 const Utils = require('../utils/utils');
 const TestUtils = require('../utils/test_utils');
+
 const { displayLimit } = require('../models/post');
 
-require('dotenv').config();
+require('dotenv').config({ path: `.env.${process.env.NODE_ENV}` });
+const server = process.env.RUNNING_IN_DOCKER ? 'web' : process.env.SERVER_ADDRESS;
 
-const server = process.env.SERVER_ADDRESS;
+console.log("nodeenv: ", process.env.NODE_ENV);
+console.log(server);
+
 
 chai.should();
 chai.use(chaiHttp);

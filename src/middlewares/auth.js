@@ -13,8 +13,9 @@ module.exports = async function(req, res, next) {
     if (!token) {
         return res.status(401).json({ msg: 'Unauthorized'});
     }
+    
     try {
-        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+        const decoded = jwt.verify(token, process.env.JWT_SECRET, { expiresIn: '1h' });
         req.user = decoded;
         const lastTimestamp = await pool.query('SELECT last_update FROM users WHERE id = $1', [decoded.userInfo.userId]);
 
