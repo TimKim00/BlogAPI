@@ -123,7 +123,6 @@ const Post = {
         query = sortSearch(query, sortBy, sortParam);
 
         query += `LIMIT ${this.displayLimit}`;
-        console.log(query);
         const result = await pool.query(query, params);
         const ret = result.rowCount > 0? result.rows.map(postFilter) : null;
         

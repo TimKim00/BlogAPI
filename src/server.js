@@ -3,6 +3,7 @@ const authRoutes = require('./routes/auth');
 const postRoutes = require('./routes/posts');
 const accessRoutes = require('./routes/access');
 const searchRoutes = require('./routes/search');
+const Utils = require('./utils/utils');
 
 const app = express();
 // Use express.json() middleware

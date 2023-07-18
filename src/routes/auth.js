@@ -85,17 +85,16 @@ router.put('/changePW', authenticator, async (req, res) => {
     }
 });
 
-router.post('/removeUser', authenticator, async (req, res) => {
+router.delete('/removeUser', authenticator, async (req, res) => {
     try {
         // Check that username and user infomration are provided
         if (!req.body || !req.body.username || !req.user) {
             return res.status(400).json({ msg: 'Invalid credentials.' });
         }
         // If the current user is not an admin and they're trying to delete a different user
-        if (!req.user.admin && req.body.username !== req.user.userInfo.username) {
+        if (!req.user.userInfo.adminStatus && req.body.username !== req.user.userInfo.username) {
             return res.status(401).json({ msg: 'Unauthorized' });
         }
-
         if (await User.removeUser(req.body.username)) {
             return res.status(204).end();
         } else {

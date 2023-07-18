@@ -145,10 +145,10 @@ router.get('/:postId/comments/:commentId', authenticator, async (req, res) => {
 
 /** Create a comment */
 router.post('/:postId/comments', authenticator, async (req, res) => {
+    const postId = req.params.postId;
     try {
         /* Check if all the fields are present. */
-        if (!req.body || !req.body.postId || !req.body.content
-            || !req.body.userId) {
+        if (!req.body  || !req.body.content || !req.body.userId) {
             return res.status(400).json({ msg: 'Comment Creation Failed.' });
         }
 
@@ -156,7 +156,7 @@ router.post('/:postId/comments', authenticator, async (req, res) => {
 
         const headId = req.body.headId ? req.body.headId : null;
 
-        const result = await Comment.createComment(req.body.postId, headId
+        const result = await Comment.createComment(postId, headId
             , isPrivate, req.body.content);
 
         return res.status(201).json({ commentInfo: result })

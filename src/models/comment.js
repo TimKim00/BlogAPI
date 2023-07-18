@@ -36,7 +36,6 @@ const Comment = {
                 const replies = await this.readAllReplies(comments[i].commentId, userInfo, ownerId);
                 comments[i].replies = replies;
             }
-            // console.log(comments[0].replies);
             return comments;
         } else {
             return null;
