@@ -48,13 +48,18 @@ const Post = {
         return result.rowCount > 0? postFilter(result.rows[0]) : null;
     },
 
-    async userHasAccess(ownerId, postId) {
+    async userHasAccess(userId, postId) {
         const postInfo = await pool.query('SELECT owner_id FROM posts '
         + 'WHERE id = $1', [postId]);
-        if (postInfo && postInfo.rows[0].owner_id === ownerId) {
+
+        if (postInfo && postInfo.rows[0].owner_id === userId) {
             return true;
         }
-        return false;
+
+        const inviteInfo = await pool.query('SELECT 1 FROM invites '
+        + 'WHERE post_id = $1 AND user_id = $2', [postId, userId]);
+        
+        return inviteInfo.rowCount > 0;
     },
 
     async sharePost(postId, invitees) {

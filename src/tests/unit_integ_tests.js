@@ -1,3 +1,8 @@
+/**
+ * Started as a unit test but became integration test
+ * For the most part. 
+ */
+
 const chai = require('chai');
 const chaiHttp = require('chai-http');
 const Utils = require('../utils/utils');
@@ -1034,6 +1039,42 @@ describe('Unit tests for invite features', () => {
                 done();
             });
     });
+
+    it('User1, User2 and User3 should update the same post concurrently', async function() {
+        const updatedPost1 = { title: 'Updated Title 1', content: 'Updated Content 1' };
+        const updatedPost2 = { title: 'Updated Title 2', content: 'Updated Content 2' };
+        const updatedPost3 = { title: 'Updated Title 3', content: 'Updated Content 3' };
+
+        // Make the requests
+        const request1 = chai.request(server).put(`/posts/${post1Id}`).set('Authorization', `Bearer ${user1Token}`).send(updatedPost1);
+        const request2 = chai.request(server).put(`/posts/${post1Id}`).set('Authorization', `Bearer ${user2Token}`).send(updatedPost2);
+        const request3 = chai.request(server).put(`/posts/${post1Id}`).set('Authorization', `Bearer ${user3Token}`).send(updatedPost3);
+
+        // Execute all requests concurrently
+        const [res1, res2, res3] = await Promise.all([request1, request2, request3]);
+
+        // Check the responses
+        res1.should.have.status(200);
+        res1.body.should.be.a('object');
+        res1.body.should.have.property('postInfo');
+        res1.body.postInfo.title.should.be.eql(updatedPost1.title);
+        res1.body.postInfo.content.should.be.eql(updatedPost1.content);
+
+        res2.should.have.status(200);
+        res2.body.should.be.a('object');
+        res2.body.should.have.property('postInfo');
+        res2.body.postInfo.title.should.be.eql(updatedPost2.title);
+        res2.body.postInfo.content.should.be.eql(updatedPost2.content);
+
+        res3.should.have.status(200);
+        res3.body.should.be.a('object');
+        res3.body.should.have.property('postInfo');
+        res3.body.postInfo.title.should.be.eql(updatedPost3.title);
+        res3.body.postInfo.content.should.be.eql(updatedPost3.content);
+    });
+
+
+
 
     it('User1 Revoke User2 and User3', (done) => {
         const postInfo = {

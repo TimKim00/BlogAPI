@@ -3,11 +3,13 @@ const User = require('../models/user');
 
 const Utils = {
 
-    // Initialize the database. 
+    // Initialize the database to default settings.
     async initializeDatabase() {
         await Utils.clearDataBase();
         await User.createDummyUser();
     },
+
+    // Clears everything inside the database.
     async clearDataBase() {
         await this.clearInvites();
         await this.clearComments();
@@ -16,6 +18,7 @@ const Utils = {
         return;
     },
 
+    // 
     async clearUser() {
         await pool.query('DELETE FROM users');
         return;
