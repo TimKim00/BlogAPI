@@ -55,7 +55,7 @@ jobs:
       run: npm test
       env:
         NODE_ENV: test
-        SERVER_ADDRESS: localhost
+        SERVER_ADDRESS: http://localhost:3000
 
   docker-build-push:
     needs: test
