@@ -29,6 +29,7 @@ const Utils = {
         return allCommentId.length === 0 && result;
     },
 
+    /** Check whether valid users with access are returned in the accessInfo. */
     checkAccesses(accessInfo, validUsers) {
         if (!accessInfo) {
             return false;
