@@ -51,11 +51,18 @@ jobs:
     - name: Wait for PostgreSQL to start
       run: dockerize -wait tcp://localhost:5432 -timeout 1m
 
+    - name: Run migrations
+      run: npm run migrate
+
     - name: Run tests
       run: npm test
       env:
         NODE_ENV: test
-        SERVER_ADDRESS: localhost
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USER: blog_user
+        DB_PASSWORD: RESTfulAPI
+        DB_DATABASE: blogapi
 
   docker-build-push:
     needs: test
